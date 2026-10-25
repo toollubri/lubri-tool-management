@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#10213b">
+<title>Lubri | Tool Management System</title>
+<style>
+:root{--navy:#10213b;--blue:#1769e0;--cyan:#22c3d6;--bg:#f3f6fb;--text:#18263b;--muted:#718096;--border:#e1e7f0;--green:#138a60;--red:#d84444}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,Arial,sans-serif;background:var(--bg);color:var(--text)}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer;border:0;border-radius:10px;padding:12px 16px;font-weight:650}
+button:disabled{opacity:.5;cursor:not-allowed}
+.primary{background:var(--blue);color:#fff}
+.secondary{background:#e9eff9;color:var(--navy)}
+.danger{background:#ffeded;color:#bd3030}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+.hidden{display:none!important}
+.brand{display:flex;align-items:center;gap:12px;font-size:21px;font-weight:800;color:var(--navy)}
+.logo{width:42px;height:42px;background:linear-gradient(135deg,#1769e0,#22c3d6);color:#fff;border-radius:13px;display:grid;place-items:center;font-weight:900}
+header{background:white;border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:5}
+main{max-width:1200px;margin:auto;padding:24px 18px}
+.auth-wrap{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;background:white}
+.auth-hero{background:linear-gradient(145deg,#10213b,#174b86 70%,#1769e0);color:white;padding:clamp(30px,7vw,90px);display:flex;flex-direction:column;justify-content:center}
+.auth-hero h1{font-size:clamp(34px,5vw,58px);line-height:1.1;margin:24px 0 15px}
+.auth-hero p{line-height:1.8;color:#dbeaff;max-width:470px}
+.hero-tag{display:inline-block;padding:8px 12px;border:1px solid #ffffff55;border-radius:30px;width:max-content;font-size:12px}
+.auth-side{display:flex;align-items:center;justify-content:center;padding:28px}
+.auth-card{width:100%;max-width:440px}
+h2{margin:0 0 8px}
+h3{margin:0 0 16px}
+.field{display:flex;flex-direction:column;gap:7px;margin:14px 0}
+label{font-size:13px;font-weight:700}
+input,select,textarea{width:100%;padding:12px;border:1px solid var(--border);border-radius:9px;background:white;color:var(--text);outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px #1769e019}
+textarea{min-height:90px;resize:vertical}
+.tabs{display:flex;gap:6px;padding:5px;background:#eef2f8;border-radius:12px;margin:22px 0}
+.tab{flex:1;background:transparent;color:var(--muted);padding:11px 5px}
+.tab.active{background:white;color:var(--blue);box-shadow:0 1px 4px #00000012}
+.full{width:100%}
+.error{color:var(--red);font-size:13px;margin:12px 0}
+.success{color:var(--green);font-size:13px;margin:12px 0}
+.notice{padding:12px;border-radius:10px;background:#eaf5ff;color:#24517d;font-size:13px;line-height:1.6}
+.topline{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+.topline h2{font-size:26px}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:20px}
+.card{background:white;border:1px solid var(--border);border-radius:15px;padding:18px;box-shadow:0 3px 12px #172c4a05;min-width:0}
+.stat-label{font-size:13px;color:var(--muted)}
+.stat-value{font-size:30px;font-weight:800;margin-top:9px}
+.stat-icon{float:right;background:#edf4ff;padding:9px;border-radius:10px}
+.layout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 14px}
+.span2{grid-column:1/-1}
+.section-title{font-size:17px;font-weight:800;margin-bottom:16px}
+.nav{display:flex;gap:7px;overflow:auto;padding:0 0 18px}
+.nav button{white-space:nowrap;background:#e8edf5;color:#526178}
+.nav button.active{background:var(--navy);color:white}
+.table-wrap{overflow:auto;width:100%}
+table{width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap}
+th,td{text-align:left;padding:12px;border-bottom:1px solid var(--border)}
+th{color:var(--muted);font-weight:700;background:#f9fbfe}
+.badge{padding:5px 9px;border-radius:30px;background:#e6f8ef;color:#12764f;font-size:11px;font-weight:750}
+.badge.off{background:#fff0e4;color:#a35a18}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.actions button{padding:9px 12px;font-size:12px}
+.empty{text-align:center;padding:25px;color:var(--muted)}
+hr{border:0;border-top:1px solid var(--border);margin:20px 0}
+footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#10213b;color:white;padding:13px 18px;border-radius:10px;z-index:20;box-shadow:0 6px 20px #0002;max-width:90%;font-size:13px}
+@media(max-width:800px){.auth-wrap{grid-template-columns:1fr}.auth-hero{display:none}.auth-side{align-items:flex-start;padding:45px 22px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.layout{grid-template-columns:1fr}header{padding:12px 14px}main{padding:18px 12px}.stat-value{font-size:25px}}
+@media(max-width:420px){.form-grid{grid-template-columns:1fr}.span2{grid-column:auto}.brand{font-size:17px}.grid{gap:9px}.card{padding:13px}.stat-value{font-size:23px}}
+</style>
+</head>
+<body>
+
+<section id="authView" class="auth-wrap">
+  <div class="auth-hero">
+    <div class="brand" style="color:white"><div class="logo">L</div>LUBRI</div>
+    <span class="hero-tag" style="margin-top:35px">FIELD SERVICE MANAGEMENT</span>
+    <h1>Every visit.<br>Every tool.<br>Under control.</h1>
+    <p>Manage service visits, customer companies, machine details and coolant usage from one connected workspace.</p>
+    <div style="margin-top:30px;font-size:13px;color:#dbeaff">Secure access · GPS attendance · Service reports</div>
+  </div>
+  <div class="auth-side">
+    <div class="auth-card">
+      <div class="brand"><div class="logo">L</div>LUBRI <span class="muted" style="font-size:12px;font-weight:500">TOOL MANAGEMENT</span></div>
+      <div style="margin-top:35px">
+        <h2 id="authHeading">Welcome back</h2>
+        <p id="authSubheading" class="muted">Sign in to your workspace.</p>
+      </div>
+      <div class="tabs">
+        <button id="loginTab" class="tab active" onclick="showAuth('login')">Login</button>
+        <button id="registerTab" class="tab" onclick="showAuth('register')">Employee</button>
+        <button id="hrTab" class="tab" onclick="showAuth('hr')">HR Access</button>
+      </div>
+      <form id="loginForm">
+        <div class="field"><label>Username</label><input id="loginUsername" autocomplete="username" required maxlength="50" placeholder="Enter username"></div>
+        <div class="field"><label>Password</label><input id="loginPassword" type="password" autocomplete="current-password" required maxlength="128" placeholder="Enter password"></div>
+        <button class="primary full" type="submit">Sign in →</button>
+      </form>
+      <form id="registerForm" class="hidden">
+        <div class="field"><label>Full name</label><input id="regName" required maxlength="100"></div>
+        <div class="form-grid">
+          <div class="field"><label>Employee ID</label><input id="regCode" required maxlength="50"></div>
+          <div class="field"><label>Mobile number</label><input id="regMobile" required maxlength="20" inputmode="tel"></div>
+        </div>
+        <div class="field"><label>Username</label><input id="regUsername" required maxlength="50" autocomplete="username"></div>
+        <div class="field"><label>Password (12+ characters)</label><input id="regPassword" type="password" required minlength="12" maxlength="128" autocomplete="new-password"></div>
+        <button class="primary full" type="submit">Create employee account</button>
+      </form>
+      <form id="hrForm" class="hidden">
+        <div class="field"><label>HR full name</label><input id="hrName" required maxlength="100"></div>
+        <div class="field"><label>HR username</label><input id="hrUsername" required maxlength="50" autocomplete="username"></div>
+        <div class="field"><label>Password (12+ characters)</label><input id="hrPassword" type="password" required minlength="12" maxlength="128" autocomplete="new-password"></div>
+        <div class="field"><label>HR Master Key</label><input id="hrKey" type="password" required autocomplete="off" placeholder="Enter authorised master key"></div>
+        <div class="notice">HR registration requires the company master key. Keep it confidential.</div>
+        <button class="primary full" style="margin-top:15px" type="submit">Register HR account</button>
+      </form>
+      <div id="authMessage" role="status"></div>
+      <p class="muted small" style="margin-top:22px">Authorised personnel only. Your session expires after 12 hours.</p>
+    </div>
+  </div>
+</section>
+
+<div id="appView" class="hidden">
+<header>
+  <div class="brand"><div class="logo">L</div><span>LUBRI <span class="muted" style="font-size:11px;font-weight:500">WORKSPACE</span></span></div>
+  <div class="actions" style="align-items:center"><div style="text-align:right"><div id="headerUserName" style="font-size:13px;font-weight:750"></div><div id="headerUserRole" class="muted small"></div></div><button class="secondary" onclick="logout()">Logout</button></div>
+</header>
+<main>
+  <div class="topline"><div><h2 id="pageTitle">Dashboard</h2><div id="todayLabel" class="muted small"></div></div><span class="badge">● SYSTEM ONLINE</span></div>
+  <nav id="nav" class="nav"></nav>
+  <div id="page"></div>
+</main>
+<footer>Lubri Tool Management System · Field Service Workspace</footer>
+</div>
+<div id="toast" class="hidden" role="status"></div>
+
+<script>
+"use strict";
+const API = "/api";
+const $ = id => document.getElementById(id);
+let token = sessionStorage.getItem("lubri_token") || "";
+let currentUser = null;
+let currentPage = "dashboard";
+let companies = [];
+let employees = [];
+let visits = [];
+let openVisit = null;
+let toastTimer;
+
+function escapeHTML(value) {
+  return String(value ?? "").replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  })[c]);
+}
+function notify(message) {
+  $("toast").textContent = message;
+  $("toast").classList.remove("hidden");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $("toast").classList.add("hidden"), 3500);
+}
+function authMessage(message, good=false) {
+  $("authMessage").className = good ? "success" : "error";
+  $("authMessage").textContent = message;
+}
+async function api(path, options={}) {
+  const headers = {"Content-Type":"application/json",...(options.headers||{})};
+  if (token) headers.Authorization = "Bearer " + token;
+  const response = await fetch(API + path, {...options, headers});
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || data.message || "Request failed.");
+  return data;
+}
+function showAuth(mode) {
+  for (const id of ["loginForm","registerForm","hrForm"]) $(id).classList.add("hidden");
+  for (const id of ["loginTab","registerTab","hrTab"]) $(id).classList.remove("active");
+  const map = {login:["loginForm","loginTab","Welcome back","Sign in to your workspace."],register:["registerForm","registerTab","Employee registration","Create your employee account."],hr:["hrForm","hrTab","HR registration","Register using your authorised master key."]};
+  const item = map[mode];
+  $(item[0]).classList.remove("hidden");
+  $(item[1]).classList.add("active");
+  $("authHeading").textContent = item[2];
+  $("authSubheading").textContent = item[3];
+  $("authMessage").textContent = "";
+}
+$("loginForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  try {
+    const data = await api("/login",{method:"POST",body:JSON.stringify({username:$("loginUsername").value.trim(),password:$("loginPassword").value})});
+    token = data.token;
+    sessionStorage.setItem("lubri_token",token);
+    currentUser = data.user;
+    await startApp();
+  } catch(err) {authMessage(err.message);}
+});
+$("registerForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  try {
+    const data = await api("/register",{method:"POST",body:JSON.stringify({name:$("regName").value.trim(),employee_code:$("regCode").value.trim(),mobile:$("regMobile").value.trim(),username:$("regUsername").value.trim(),password:$("regPassword").value})});
+    authMessage(data.message || "Registration successful. Please log in.",true);
+    $("registerForm").reset();
+    showAuth("login");
+    notify("Employee registered. Please log in.");
+  } catch(err){authMessage(err.message);}
+});
+$("hrForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  try {
+    const data=await api("/setup-hr",{method:"POST",headers:{"X-Setup-Key":$("hrKey").value},body:JSON.stringify({name:$("hrName").value.trim(),username:$("hrUsername").value.trim(),password:$("hrPassword").value})});
+    authMessage(data.message || "HR registered. Please log in.",true);
+    $("hrForm").reset();
+    showAuth("login");
+  } catch(err){authMessage(err.message);}
+});
+async function logout(){
+  try{await api("/logout",{method:"POST",body:"{}"});}catch{}
+  token="";currentUser=null;sessionStorage.removeItem("lubri_token");
+  $("appView").classList.add("hidden");$("authView").classList.remove("hidden");showAuth("login");
+}
+async function startApp(){
+  if(!currentUser) currentUser=await api("/me");
+  $("authView").classList.add("hidden");$("appView").classList.remove("hidden");
+  $("headerUserName").textContent=currentUser.name;
+  $("headerUserRole").textContent=currentUser.role==="hr"?"HR / Management":"Employee";
+  $("todayLabel").textContent=new Date().toLocaleDateString(undefined,{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+  await loadBase();
+  renderNav();
+  await navigate("dashboard");
+}
+async function loadBase(){
+  const c=await api("/companies");companies=c.companies||[];
+  const a=await api("/attendance");visits=a.attendance||[];
+  openVisit=visits.find(v=>!v.check_out_time)||null;
+  if(currentUser.role==="hr"){const e=await api("/employees");employees=e.employees||[];}
+}
+const navItems = [
+  ["dashboard","Dashboard"],["visit","Service Visit"],["history","Visit History"],
+  ["companies","Companies"],["employees","Employees"],["reports","Reports"]
+];
+function renderNav(){
+  const items=navItems.filter(([id])=>{
+    if(currentUser.role!=="hr")return ["dashboard","visit","history"].includes(id);
+    return true;
+  });
+  $("nav").innerHTML=items.map(([id,label])=>`<button class="${id===currentPage?"active":""}" onclick="navigate('${id}')">${label}</button>`).join("");
+}
+async function navigate(id){
+  currentPage=id;renderNav();
+  const labels={dashboard:"Dashboard",visit:"Service Visit",history:"Visit History",companies:"Company Management",employees:"Employee Directory",reports:"Attendance & Reports"};
+  $("pageTitle").textContent=labels[id]||"Dashboard";
+  try{
+    if(id==="dashboard")renderDashboard();
+    if(id==="visit")renderVisit();
+    if(id==="history")renderHistory();
+    if(id==="companies"){if(currentUser.role!=="hr")throw Error("HR access required.");renderCompanies();}
+    if(id==="employees"){if(currentUser.role!=="hr")throw Error("HR access required.");renderEmployees();}
+    if(id==="reports"){if(currentUser.role!=="hr")throw Error("HR access required.");renderReports();}
+  }catch(err){$("page").innerHTML=`<div class="card error">${escapeHTML(err.message)}</div>`;}
+}
+function stat(label,value,icon){return `<div class="card"><span class="stat-icon">${icon}</span><div class="stat-label">${label}</div><div class="stat-value">${value}</div></div>`;}
+function renderDashboard(){
+  const today=new Date().toISOString().slice(0,10);
+  const todayVisits=visits.filter(v=>(v.check_in_time||"").slice(0,10)===today);
+  const completed=visits.filter(v=>v.check_out_time);
+  $("page").innerHTML=`
+    <div class="grid">
+      ${stat("Total visits",visits.length,"◷")}
+      ${stat("Today's visits",todayVisits.length,"▦")}
+      ${stat("Completed visits",completed.length,"✓")}
+      ${stat(currentUser.role==="hr"?"Employees":"Customer companies",currentUser.role==="hr"?employees.length:companies.length,"♙")}
+    </div>
+    <div class="layout">
+      <div class="card"><div class="section-title">Quick actions</div><p class="muted">Record service activity and keep visit details up to date.</p><div class="actions"><button class="primary" onclick="navigate('visit')">${openVisit?"Continue current visit":"Start service visit"}</button><button class="secondary" onclick="navigate('history')">View visit history</button></div></div>
+      <div class="card"><div class="section-title">Current visit</div>${openVisit?`<b>${escapeHTML(openVisit.company_name||"Customer")}</b><p class="muted small">${escapeHTML(openVisit.check_in_time||"Checked in")}</p><span class="badge off">Check-out pending</span><p><button class="primary" onclick="navigate('visit')">Continue visit</button></p>`:`<p class="muted">No active visit. Start a new service visit when you arrive at the customer location.</p>`}</div>
+    </div>
+    <div class="card" style="margin-top:16px"><div class="section-title">Recent visits</div>${visits.length?tableVisits(visits.slice(0,5)):`<div class="empty">No visits recorded yet.</div>`}</div>`;
+}
+function renderVisit(){
+  const companyOptions=companies.map(c=>`<option value="${c.id}" ${openVisit&&Number(openVisit.company_id)===Number(c.id)?"selected":""}>${escapeHTML(c.company_name)}</option>`).join("");
+  if(!companies.length){
+    $("page").innerHTML=`<div class="card"><h3>Customer company required</h3><p class="muted">HR must add a company before employees can check in.</p></div>`;return;
+  }
+  const v=openVisit;
+  $("page").innerHTML=`
+  <div class="layout">
+    <div class="card">
+      <div class="section-title">${v?"Active service visit":"Start a service visit"}</div>
+      <p class="muted small">GPS location is requested only when you press Check in or Check out.</p>
+      <div class="field"><label>Customer company</label><select id="visitCompany" ${v?"disabled":""} required>${companyOptions}</select></div>
+      ${v?`<div class="notice">Checked in at ${escapeHTML(v.check_in_time)}. Save service details below, then check out when finished.</div>`:`<button class="primary full" onclick="checkIn()">📍 Check in with GPS</button>`}
+      ${v?`<hr><button class="primary full" onclick="checkOut()">📍 Check out with GPS</button>`:""}
+      <div id="visitMessage"></div>
+    </div>
+    <div class="card">
+      <div class="section-title">Service details</div>
+      <form id="serviceForm">
+        <div class="field"><label>Machine type</label><input id="machineType" maxlength="100" placeholder="e.g. CNC / VMC / Lathe" value="${escapeHTML(v?.machine_type||"")}"></div>
+        <div class="form-grid">
+          <div class="field"><label>Machine count</label><input id="machineCount" type="number" min="0" max="10000" value="${Number(v?.machine_count||0)}"></div>
+          <div class="field"><label>Coolant quantity</label><input id="coolantQuantity" type="number" min="0" max="1000000" step="0.01" value="${Number(v?.coolant_quantity||0)}"></div>
+        </div>
+        <div class="field"><label>Coolant unit</label><select id="coolantUnit">${["litre","ml","kg","gallon"].map(x=>`<option ${v?.coolant_unit===x?"selected":""}>${x}</option>`).join("")}</select></div>
+        <div class="field"><label>Service status</label><select id="serviceStatus">${["Pending","In Progress","Completed","Follow-up Required"].map(x=>`<option ${v?.service_status===x?"selected":""}>${x}</option>`).join("")}</select></div>
+        <div class="field"><label>Work description</label><textarea id="workDescription" maxlength="2000" placeholder="Work performed, observations...">${escapeHTML(v?.work_description||"")}</textarea></div>
+        <div class="field"><label>Remarks</label><textarea id="visitRemarks" maxlength="1000" placeholder="Additional remarks...">${escapeHTML(v?.remarks||"")}</textarea></div>
+        <button class="primary full" type="submit" ${!v?"disabled":""}>Save service details</button>
+        ${!v?`<p class="muted small">Check in first to save details.</p>`:""}
+      </form>
+    </div>
+  </div>`;
+  $("serviceForm").addEventListener("submit",saveService);
+}
+function getGPS(){
+  return new Promise((resolve,reject)=>{
+    if(!navigator.geolocation)return reject(Error("This browser does not support GPS."));
+    navigator.geolocation.getCurrentPosition(pos=>resolve({latitude:pos.coords.latitude,longitude:pos.coords.longitude,accuracy:pos.coords.accuracy}),err=>reject(Error(err.code===1?"Location permission denied. Allow location access and try again.":err.code===2?"GPS location unavailable. Try outdoors.":"GPS request timed out. Try again.")),{enableHighAccuracy:true,timeout:20000,maximumAge:0});
+  });
+}
+async function checkIn(){
+  try{
+    if(openVisit)throw Error("Please check out of your current visit first.");
+    const company_id=Number($("visitCompany").value);
+    if(!company_id)throw Error("Select a customer company.");
+    notify("Getting GPS location...");
+    const gps=await getGPS();
+    const result=await api("/attendance/check-in",{method:"POST",body:JSON.stringify({company_id,...gps})});
+    notify(result.message||"Check-in successful.");
+    await loadBase();await navigate("visit");
+  }catch(err){notify(err.message);}
+}
+async function checkOut(){
+  try{
+    if(!openVisit)throw Error("No active visit found.");
+    notify("Getting GPS location...");
+    const gps=await getGPS();
+    const result=await api("/attendance/check-out",{method:"POST",body:JSON.stringify({attendance_id:openVisit.id,...gps})});
+    notify(result.message||"Check-out successful.");
+    await loadBase();await navigate("visit");
+  }catch(err){notify(err.message);}
+}
+async function saveService(e){
+  e.preventDefault();
+  if(!openVisit)return notify("Check in first.");
+  try{
+    const body={attendance_id:openVisit.id,machine_type:$("machineType").value,machine_count:Number($("machineCount").value),coolant_quantity:Number($("coolantQuantity").value),coolant_unit:$("coolantUnit").value,service_status:$("serviceStatus").value,work_description:$("workDescription").value,remarks:$("visitRemarks").value};
+    const result=await api("/attendance/details",{method:"PATCH",body:JSON.stringify(body)});
+    notify(result.message||"Service details saved.");
+    await loadBase();await navigate("visit");
+  }catch(err){notify(err.message);}
+}
+function tableVisits(rows){
+  if(!rows.length)return `<div class="empty">No records found.</div>`;
+  return `<div class="table-wrap"><table><thead><tr><th>Date / Check-in</th>${currentUser.role==="hr"?"<th>Employee</th>":""}<th>Company</th><th>Machine</th><th>Coolant</th><th>Status</th><th>Check-out</th></tr></thead><tbody>${rows.map(v=>`<tr><td>${escapeHTML(v.check_in_time||"")}</td>${currentUser.role==="hr"?`<td>${escapeHTML(v.employee_name||"")}</td>`:""}<td>${escapeHTML(v.company_name||"")}</td><td>${escapeHTML(v.machine_type||"-")} (${Number(v.machine_count||0)})</td><td>${Number(v.coolant_quantity||0)} ${escapeHTML(v.coolant_unit||"litre")}</td><td><span class="badge ${v.check_out_time?"":"off"}">${escapeHTML(v.service_status||"Pending")}</span></td><td>${escapeHTML(v.check_out_time||"Open")}</td></tr>`).join("")}</tbody></table></div>`;
+}
+function renderHistory(){
+  $("page").innerHTML=`<div class="card"><div class="topline"><div class="section-title">Visit history</div><button class="secondary" onclick="refreshData()">Refresh</button></div>${tableVisits(visits)}</div>`;
+}
+function renderCompanies(){
+  $("page").innerHTML=`
+  <div class="layout">
+    <div class="card"><div class="section-title">Add customer company</div>
+      <form id="companyForm">
+        <div class="field"><label>Company name *</label><input id="companyName" required maxlength="150"></div>
+        <div class="field"><label>Contact person</label><input id="contactPerson" maxlength="100"></div>
+        <div class="field"><label>Mobile</label><input id="companyMobile" maxlength="20" inputmode="tel"></div>
+        <div class="field"><label>Address</label><textarea id="companyAddress" maxlength="1000"></textarea></div>
+        <button class="primary full">Save company</button>
+      </form>
+    </div>
+    <div class="card"><div class="section-title">Customer directory · ${companies.length}</div>${companies.length?companies.map(c=>`<div style="padding:12px 0;border-bottom:1px solid var(--border)"><b>${escapeHTML(c.company_name)}</b><div class="muted small">${escapeHTML(c.contact_person||"")} ${escapeHTML(c.mobile||"")}</div><div class="muted small">${escapeHTML(c.address||"")}</div></div>`).join(""):`<div class="empty">No companies added yet.</div>`}</div>
+  </div>`;
+  $("companyForm").addEventListener("submit",async e=>{
+    e.preventDefault();
+    try{
+      const result=await api("/companies",{method:"POST",body:JSON.stringify({company_name:$("companyName").value.trim(),contact_person:$("contactPerson").value.trim(),mobile:$("companyMobile").value.trim(),address:$("companyAddress").value.trim()})});
+      notify(result.message||"Company saved.");
+      await loadBase();renderCompanies();
+    }catch(err){notify(err.message);}
+  });
+}
+function renderEmployees(){
+  $("page").innerHTML=`<div class="card"><div class="topline"><div><div class="section-title">Employee directory</div><div class="muted small">${employees.length} registered employees</div></div><button class="secondary" onclick="refreshData()">Refresh</button></div><div class="table-wrap"><table><thead><tr><th>Employee ID</th><th>Name</th><th>Mobile</th><th>Username</th><th>Status</th><th>Joined</th></tr></thead><tbody>${employees.map(e=>`<tr><td>${escapeHTML(e.employee_code)}</td><td>${escapeHTML(e.name)}</td><td>${escapeHTML(e.mobile)}</td><td>${escapeHTML(e.username)}</td><td><span class="badge ${e.active?"":"off"}">${e.active?"Active":"Inactive"}</span></td><td>${escapeHTML(e.created_at||"")}</td></tr>`).join("")}</tbody></table></div>${employees.length?"":`<div class="empty">No employees registered yet.</div>`}</div>`;
+}
+function renderReports(){
+  $("page").innerHTML=`
+  <div class="grid">${stat("All service visits",visits.length,"▦")}${stat("Completed",visits.filter(v=>v.check_out_time).length,"✓")}${stat("Open visits",visits.filter(v=>!v.check_out_time).length,"◷")}${stat("Companies",companies.length,"⌂")}</div>
+  <div class="card"><div class="topline"><div><div class="section-title">Service report</div><div class="muted small">Export attendance and service details to CSV.</div></div><div class="actions"><button class="secondary" onclick="downloadCSV()">Export CSV ↓</button><button class="secondary" onclick="refreshData()">Refresh</button></div></div>${tableVisits(visits)}</div>
+  <div class="card" style="margin-top:16px"><div class="section-title">Record retention</div><p class="muted small">Choose how many months records should be retained. Saving this setting does not itself delete older records.</p><form id="retentionForm" class="actions"><select id="retentionMonths" style="max-width:180px">${[1,2,3,6,9,12,18,24,36].map(m=>`<option value="${m}">${m} month${m>1?"s":""}</option>`).join("")}</select><button class="primary">Save setting</button></form></div>`;
+  $("retentionForm").addEventListener("submit",async e=>{
+    e.preventDefault();
+    try{const r=await api("/settings/retention",{method:"POST",body:JSON.stringify({months:Number($("retentionMonths").value)})});notify(r.message||"Retention setting saved.");}
+    catch(err){notify(err.message);}
+  });
+}
+function downloadCSV(){
+  const rows=[["Visit ID","Employee","Employee ID","Company","Check-in","Check-in latitude","Check-in longitude","Check-in accuracy","Check-out","Check-out latitude","Check-out longitude","Check-out accuracy","Machine type","Machine count","Coolant quantity","Coolant unit","Work description","Service status","Remarks"]];
+  for(const v of visits)rows.push([v.id,v.employee_name||currentUser.name,v.employee_code||"",v.company_name,v.check_in_time,v.check_in_latitude,v.check_in_longitude,v.check_in_accuracy,v.check_out_time,v.check_out_latitude,v.check_out_longitude,v.check_out_accuracy,v.machine_type,v.machine_count,v.coolant_quantity,v.coolant_unit,v.work_description,v.service_status,v.remarks]);
+  const csv=rows.map(row=>row.map(value=>{let s=String(value??"");if(/^[=+\-@\t\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';}).join(",")).join("\r\n");
+  const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
+  const url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download="lubri-service-report-"+new Date().toISOString().slice(0,10)+".csv";a.click();URL.revokeObjectURL(url);
+}
+async function refreshData(){
+  try{await loadBase();await navigate(currentPage);notify("Data refreshed.");}
+  catch(err){notify(err.message);}
+}
+(async()=>{
+  showAuth("login");
+  if(token){
+    try{await startApp();}
+    catch{token="";sessionStorage.removeItem("lubri_token");}
+  }
+})();
+</script>
+</body>
+  </html>
