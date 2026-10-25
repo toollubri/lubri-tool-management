@@ -4,16 +4,26 @@
   "main": "src/index.js",
   "compatibility_date": "2026-10-25",
   "workers_dev": true,
+
+  "vars": {
+    "SETUP_KEY": "nexora@123"
+  },
+
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application"
   },
+
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "lubri-tool-db",
       "database_id": "2335e95f-a5c1-4de2-800d-b844a89a2b9f"
     }
-  ]
+  ],
+
+  "observability": {
+    "enabled": true
+  }
 }
