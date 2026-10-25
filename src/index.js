@@ -13,6 +13,7 @@ function json(data, status = 200) {
 async function hash(value) {
   const data = encoder.encode(value);
   const digest = await crypto.subtle.digest("SHA-256", data);
+
   return Array.from(new Uint8Array(digest))
     .map(b => b.toString(16).padStart(2, "0"))
     .join("");
@@ -20,6 +21,7 @@ async function hash(value) {
 
 function randomToken() {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
+
   return Array.from(bytes)
     .map(b => b.toString(16).padStart(2, "0"))
     .join("");
@@ -48,7 +50,12 @@ async function getUser(request, env) {
   const tokenHash = await hash(token);
 
   const session = await env.DB.prepare(`
-    SELECT e.id, e.name, e.username, e.role, e.active
+    SELECT
+      e.id,
+      e.name,
+      e.username,
+      e.role,
+      e.active
     FROM login_sessions s
     JOIN employees e ON e.id = s.employee_id
     WHERE s.token_hash = ?
@@ -63,11 +70,15 @@ async function requireHR(request, env) {
   const user = await getUser(request, env);
 
   if (!user) {
-    return { error: json({ error: "Please log in." }, 401) };
+    return {
+      error: json({ error: "Please log in." }, 401)
+    };
   }
 
   if (user.role !== "hr") {
-    return { error: json({ error: "HR access required." }, 403) };
+    return {
+      error: json({ error: "HR access required." }, 403)
+    };
   }
 
   return { user };
@@ -78,10 +89,15 @@ async function handle(request, env) {
   const path = url.pathname;
   const method = request.method;
 
+  // Health check
   if (method === "GET" && path === "/api/health") {
-    return json({ status: "ok", app: "Lubri Tool Management System" });
+    return json({
+      status: "ok",
+      app: "Lubri Tool Management System"
+    });
   }
 
+  // Initial HR registration
   if (method === "POST" && path === "/api/setup-hr") {
     const setupKey = request.headers.get("X-Setup-Key");
     const configuredKey = env.SETUP_KEY;
@@ -90,9 +106,12 @@ async function handle(request, env) {
       return json({ error: "Invalid setup key." }, 403);
     }
 
-    const existing = await env.DB.prepare(
-      "SELECT id FROM employees WHERE role = 'hr' LIMIT 1"
-    ).first();
+    const existing = await env.DB.prepare(`
+      SELECT id
+      FROM employees
+      WHERE role = 'hr'
+      LIMIT 1
+    `).first();
 
     if (existing) {
       return json({ error: "HR account already exists." }, 409);
@@ -119,8 +138,14 @@ async function handle(request, env) {
       const passwordHash = await hash(body.password);
 
       await env.DB.prepare(`
-        INSERT INTO employees
-          (employee_code, name, mobile, username, password_hash, role)
+        INSERT INTO employees (
+          employee_code,
+          name,
+          mobile,
+          username,
+          password_hash,
+          role
+        )
         VALUES (?, ?, ?, ?, ?, 'hr')
       `).bind(
         "HR-" + crypto.randomUUID(),
@@ -130,12 +155,17 @@ async function handle(request, env) {
         passwordHash
       ).run();
 
-      return json({ message: "HR account created. You can now log in." }, 201);
+      return json({
+        message: "HR account created. You can now log in."
+      }, 201);
     } catch {
-      return json({ error: "Unable to create HR account." }, 400);
+      return json({
+        error: "Unable to create HR account."
+      }, 400);
     }
   }
 
+  // Employee registration
   if (method === "POST" && path === "/api/register") {
     const body = await readBody(request);
 
@@ -161,8 +191,14 @@ async function handle(request, env) {
       const passwordHash = await hash(body.password);
 
       await env.DB.prepare(`
-        INSERT INTO employees
-          (employee_code, name, mobile, username, password_hash, role)
+        INSERT INTO employees (
+          employee_code,
+          name,
+          mobile,
+          username,
+          password_hash,
+          role
+        )
         VALUES (?, ?, ?, ?, ?, 'employee')
       `).bind(
         employeeCode,
@@ -172,7 +208,9 @@ async function handle(request, env) {
         passwordHash
       ).run();
 
-      return json({ message: "Registration successful. Please log in." }, 201);
+      return json({
+        message: "Registration successful. Please log in."
+      }, 201);
     } catch {
       return json({
         error: "Employee ID or username already exists, or details are invalid."
@@ -180,6 +218,7 @@ async function handle(request, env) {
     }
   }
 
+  // Login
   if (method === "POST" && path === "/api/login") {
     const body = await readBody(request);
 
@@ -189,13 +228,21 @@ async function handle(request, env) {
       typeof body.password !== "string" ||
       body.password.length > 128
     ) {
-      return json({ error: "Invalid username or password." }, 400);
+      return json({
+        error: "Invalid username or password."
+      }, 400);
     }
 
     const username = body.username.trim().toLowerCase();
 
     const employee = await env.DB.prepare(`
-      SELECT id, name, username, password_hash, role, active
+      SELECT
+        id,
+        name,
+        username,
+        password_hash,
+        role,
+        active
       FROM employees
       WHERE username = ?
     `).bind(username).first();
@@ -205,14 +252,20 @@ async function handle(request, env) {
       !employee.active ||
       await hash(body.password) !== employee.password_hash
     ) {
-      return json({ error: "Invalid username or password." }, 401);
+      return json({
+        error: "Invalid username or password."
+      }, 401);
     }
 
     const token = randomToken();
     const tokenHash = await hash(token);
 
     await env.DB.prepare(`
-      INSERT INTO login_sessions (token_hash, employee_id, expires_at)
+      INSERT INTO login_sessions (
+        token_hash,
+        employee_id,
+        expires_at
+      )
       VALUES (?, ?, datetime('now', '+12 hours'))
     `).bind(tokenHash, employee.id).run();
 
@@ -229,19 +282,22 @@ async function handle(request, env) {
     });
   }
 
+  // Logout
   if (method === "POST" && path === "/api/logout") {
     const auth = request.headers.get("Authorization") || "";
     const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
 
     if (token) {
-      await env.DB.prepare(
-        "DELETE FROM login_sessions WHERE token_hash = ?"
-      ).bind(await hash(token)).run();
+      await env.DB.prepare(`
+        DELETE FROM login_sessions
+        WHERE token_hash = ?
+      `).bind(await hash(token)).run();
     }
 
     return json({ message: "Logged out." });
   }
 
+  // Authenticated API routes
   if (path.startsWith("/api/")) {
     const user = await getUser(request, env);
 
@@ -249,6 +305,7 @@ async function handle(request, env) {
       return json({ error: "Please log in." }, 401);
     }
 
+    // Current user
     if (method === "GET" && path === "/api/me") {
       return json({
         id: user.id,
@@ -258,6 +315,7 @@ async function handle(request, env) {
       });
     }
 
+    // Create company
     if (method === "POST" && path === "/api/companies") {
       if (user.role !== "hr") {
         return json({ error: "HR access required." }, 403);
@@ -266,56 +324,91 @@ async function handle(request, env) {
       const body = await readBody(request);
 
       if (!body || !validText(body.company_name, 150)) {
-        return json({ error: "Company name is required." }, 400);
+        return json({
+          error: "Company name is required."
+        }, 400);
       }
 
       const result = await env.DB.prepare(`
-        INSERT INTO companies (company_name, contact_person, mobile, address)
+        INSERT INTO companies (
+          company_name,
+          contact_person,
+          mobile,
+          address
+        )
         VALUES (?, ?, ?, ?)
       `).bind(
         body.company_name.trim(),
-        typeof body.contact_person === "string" ? body.contact_person.trim() : "",
-        typeof body.mobile === "string" ? body.mobile.trim() : "",
-        typeof body.address === "string" ? body.address.trim() : ""
+        typeof body.contact_person === "string"
+          ? body.contact_person.trim()
+          : "",
+        typeof body.mobile === "string"
+          ? body.mobile.trim()
+          : "",
+        typeof body.address === "string"
+          ? body.address.trim()
+          : ""
       ).run();
 
-      return json({ message: "Company created.", id: result.meta.last_row_id }, 201);
+      return json({
+        message: "Company created.",
+        id: result.meta.last_row_id
+      }, 201);
     }
 
+    // List companies
     if (method === "GET" && path === "/api/companies") {
       const result = await env.DB.prepare(`
-        SELECT id, company_name, contact_person, mobile, address
+        SELECT
+          id,
+          company_name,
+          contact_person,
+          mobile,
+          address
         FROM companies
         WHERE active = 1
         ORDER BY company_name
       `).all();
 
-      return json({ companies: result.results });
+      return json({
+        companies: result.results
+      });
     }
 
+    // Check in
     if (method === "POST" && path === "/api/attendance/check-in") {
       const body = await readBody(request);
 
       if (!body || !Number.isInteger(Number(body.company_id))) {
-        return json({ error: "Select a valid company." }, 400);
+        return json({
+          error: "Select a valid company."
+        }, 400);
       }
 
-      const company = await env.DB.prepare(
-        "SELECT id FROM companies WHERE id = ? AND active = 1"
-      ).bind(Number(body.company_id)).first();
+      const company = await env.DB.prepare(`
+        SELECT id
+        FROM companies
+        WHERE id = ? AND active = 1
+      `).bind(Number(body.company_id)).first();
 
       if (!company) {
-        return json({ error: "Company not found." }, 404);
+        return json({
+          error: "Company not found."
+        }, 404);
       }
 
       const openVisit = await env.DB.prepare(`
-        SELECT id FROM attendance
-        WHERE employee_id = ? AND check_out_time IS NULL
+        SELECT id
+        FROM attendance
+        WHERE employee_id = ?
+          AND check_out_time IS NULL
         LIMIT 1
       `).bind(user.id).first();
 
       if (openVisit) {
-        return json({ error: "Please check out of your current visit first." }, 409);
+        return json({
+          error: "Please check out of your current visit first."
+        }, 409);
       }
 
       const lat = Number(body.latitude);
@@ -327,13 +420,19 @@ async function handle(request, env) {
         !Number.isFinite(lon) || lon < -180 || lon > 180 ||
         !Number.isFinite(accuracy) || accuracy < 0
       ) {
-        return json({ error: "Valid GPS coordinates are required." }, 400);
+        return json({
+          error: "Valid GPS coordinates are required."
+        }, 400);
       }
 
       const result = await env.DB.prepare(`
         INSERT INTO attendance (
-          employee_id, company_id, check_in_time,
-          check_in_latitude, check_in_longitude, check_in_accuracy
+          employee_id,
+          company_id,
+          check_in_time,
+          check_in_latitude,
+          check_in_longitude,
+          check_in_accuracy
         )
         VALUES (?, ?, ?, ?, ?, ?)
       `).bind(
@@ -351,20 +450,28 @@ async function handle(request, env) {
       }, 201);
     }
 
+    // Check out
     if (method === "POST" && path === "/api/attendance/check-out") {
       const body = await readBody(request);
 
       if (!body || !Number.isInteger(Number(body.attendance_id))) {
-        return json({ error: "Valid attendance ID required." }, 400);
+        return json({
+          error: "Valid attendance ID required."
+        }, 400);
       }
 
       const visit = await env.DB.prepare(`
-        SELECT id FROM attendance
-        WHERE id = ? AND employee_id = ? AND check_out_time IS NULL
+        SELECT id
+        FROM attendance
+        WHERE id = ?
+          AND employee_id = ?
+          AND check_out_time IS NULL
       `).bind(Number(body.attendance_id), user.id).first();
 
       if (!visit) {
-        return json({ error: "Open visit not found." }, 404);
+        return json({
+          error: "Open visit not found."
+        }, 404);
       }
 
       const lat = Number(body.latitude);
@@ -376,16 +483,21 @@ async function handle(request, env) {
         !Number.isFinite(lon) || lon < -180 || lon > 180 ||
         !Number.isFinite(accuracy) || accuracy < 0
       ) {
-        return json({ error: "Valid GPS coordinates are required." }, 400);
+        return json({
+          error: "Valid GPS coordinates are required."
+        }, 400);
       }
 
       await env.DB.prepare(`
-        UPDATE attendance SET
+        UPDATE attendance
+        SET
           check_out_time = ?,
           check_out_latitude = ?,
           check_out_longitude = ?,
           check_out_accuracy = ?
-        WHERE id = ? AND employee_id = ?
+        WHERE id = ?
+          AND employee_id = ?
+          AND check_out_time IS NULL
       `).bind(
         new Date().toISOString(),
         lat,
@@ -395,37 +507,52 @@ async function handle(request, env) {
         user.id
       ).run();
 
-      return json({ message: "Check-out recorded." });
+      return json({
+        message: "Check-out recorded."
+      });
     }
 
+    // Save service details
     if (method === "PATCH" && path === "/api/attendance/details") {
       const body = await readBody(request);
 
       if (!body || !Number.isInteger(Number(body.attendance_id))) {
-        return json({ error: "Valid attendance ID required." }, 400);
+        return json({
+          error: "Valid attendance ID required."
+        }, 400);
       }
 
       const visit = await env.DB.prepare(`
-        SELECT id FROM attendance
+        SELECT id
+        FROM attendance
         WHERE id = ? AND employee_id = ?
       `).bind(Number(body.attendance_id), user.id).first();
 
       if (!visit) {
-        return json({ error: "Visit not found." }, 404);
+        return json({
+          error: "Visit not found."
+        }, 404);
       }
 
       const machineCount = Number(body.machine_count ?? 0);
       const coolantQuantity = Number(body.coolant_quantity ?? 0);
 
       if (
-        !Number.isInteger(machineCount) || machineCount < 0 || machineCount > 10000 ||
-        !Number.isFinite(coolantQuantity) || coolantQuantity < 0 || coolantQuantity > 1000000
+        !Number.isInteger(machineCount) ||
+        machineCount < 0 ||
+        machineCount > 10000 ||
+        !Number.isFinite(coolantQuantity) ||
+        coolantQuantity < 0 ||
+        coolantQuantity > 1000000
       ) {
-        return json({ error: "Invalid machine count or coolant quantity." }, 400);
+        return json({
+          error: "Invalid machine count or coolant quantity."
+        }, 400);
       }
 
       await env.DB.prepare(`
-        UPDATE attendance SET
+        UPDATE attendance
+        SET
           machine_type = ?,
           machine_count = ?,
           coolant_quantity = ?,
@@ -435,93 +562,152 @@ async function handle(request, env) {
           remarks = ?
         WHERE id = ? AND employee_id = ?
       `).bind(
-        typeof body.machine_type === "string" ? body.machine_type.slice(0, 100) : "",
+        typeof body.machine_type === "string"
+          ? body.machine_type.slice(0, 100)
+          : "",
         machineCount,
         coolantQuantity,
-        typeof body.coolant_unit === "string" ? body.coolant_unit.slice(0, 20) : "litre",
-        typeof body.work_description === "string" ? body.work_description.slice(0, 2000) : "",
-        typeof body.service_status === "string" ? body.service_status.slice(0, 50) : "Pending",
-        typeof body.remarks === "string" ? body.remarks.slice(0, 1000) : "",
+        typeof body.coolant_unit === "string"
+          ? body.coolant_unit.slice(0, 20)
+          : "litre",
+        typeof body.work_description === "string"
+          ? body.work_description.slice(0, 2000)
+          : "",
+        typeof body.service_status === "string"
+          ? body.service_status.slice(0, 50)
+          : "Pending",
+        typeof body.remarks === "string"
+          ? body.remarks.slice(0, 1000)
+          : "",
         visit.id,
         user.id
       ).run();
 
-      return json({ message: "Service details saved." });
+      return json({
+        message: "Service details saved."
+      });
     }
 
+    // Attendance history and reports
     if (method === "GET" && path === "/api/attendance") {
       const isHR = user.role === "hr";
-      const employeeId = Number(url.searchParams.get("employee_id") || user.id);
+      const employeeId = Number(
+        url.searchParams.get("employee_id") || user.id
+      );
 
       if (!isHR && employeeId !== user.id) {
-        return json({ error: "You can only view your own records." }, 403);
+        return json({
+          error: "You can only view your own records."
+        }, 403);
       }
 
       const query = isHR
         ? await env.DB.prepare(`
-            SELECT a.*, e.name AS employee_name, c.company_name
+            SELECT
+              a.*,
+              e.name AS employee_name,
+              e.employee_code AS employee_code,
+              c.company_name
             FROM attendance a
             JOIN employees e ON e.id = a.employee_id
             JOIN companies c ON c.id = a.company_id
-            ORDER BY a.check_in_time DESC LIMIT 1000
+            ORDER BY a.check_in_time DESC
+            LIMIT 1000
           `).all()
         : await env.DB.prepare(`
-            SELECT a.*, c.company_name
+            SELECT
+              a.*,
+              c.company_name
             FROM attendance a
             JOIN companies c ON c.id = a.company_id
             WHERE a.employee_id = ?
-            ORDER BY a.check_in_time DESC LIMIT 500
+            ORDER BY a.check_in_time DESC
+            LIMIT 500
           `).bind(user.id).all();
 
-      return json({ attendance: query.results });
+      return json({
+        attendance: query.results
+      });
     }
 
+    // Employee directory
     if (method === "GET" && path === "/api/employees") {
       if (user.role !== "hr") {
-        return json({ error: "HR access required." }, 403);
+        return json({
+          error: "HR access required."
+        }, 403);
       }
 
       const result = await env.DB.prepare(`
-        SELECT id, employee_code, name, mobile, username, active, created_at
+        SELECT
+          id,
+          employee_code,
+          name,
+          mobile,
+          username,
+          active,
+          created_at
         FROM employees
         WHERE role = 'employee'
         ORDER BY name
       `).all();
 
-      return json({ employees: result.results });
+      return json({
+        employees: result.results
+      });
     }
 
+    // Record retention setting
     if (method === "POST" && path === "/api/settings/retention") {
       if (user.role !== "hr") {
-        return json({ error: "HR access required." }, 403);
+        return json({
+          error: "HR access required."
+        }, 403);
       }
 
       const body = await readBody(request);
       const months = Number(body?.months);
 
-      if (!Number.isInteger(months) || months < 1 || months > 36) {
-        return json({ error: "Retention must be between 1 and 36 months." }, 400);
+      if (
+        !Number.isInteger(months) ||
+        months < 1 ||
+        months > 36
+      ) {
+        return json({
+          error: "Retention must be between 1 and 36 months."
+        }, 400);
       }
 
       await env.DB.prepare(`
-        INSERT INTO app_settings (setting_key, setting_value, updated_at)
+        INSERT INTO app_settings (
+          setting_key,
+          setting_value,
+          updated_at
+        )
         VALUES ('retention_months', ?, CURRENT_TIMESTAMP)
         ON CONFLICT(setting_key) DO UPDATE SET
           setting_value = excluded.setting_value,
           updated_at = CURRENT_TIMESTAMP
       `).bind(String(months)).run();
 
-      return json({ message: "Retention setting saved. Automatic cleanup must be configured separately." });
+      return json({
+        message: "Retention setting saved. Automatic cleanup must be configured separately."
+      });
     }
 
-    return json({ error: "API route not found." }, 404);
+    return json({
+      error: "API route not found."
+    }, 404);
   }
 
+  // Frontend assets
   if (env.ASSETS) {
     return env.ASSETS.fetch(request);
   }
 
-  return json({ error: "Not found." }, 404);
+  return json({
+    error: "Not found."
+  }, 404);
 }
 
 export default {
@@ -529,8 +715,14 @@ export default {
     try {
       return await handle(request, env);
     } catch (error) {
-      console.error("Request failed:", error?.message || "Unknown error");
-      return json({ error: "Server error. Check Worker logs." }, 500);
+      console.error(
+        "Request failed:",
+        error?.message || "Unknown error"
+      );
+
+      return json({
+        error: "Server error. Check Worker logs."
+      }, 500);
     }
   }
 };
